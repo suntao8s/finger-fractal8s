@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<!--
+  ==============================================================================
+  Finger Fractal - Advanced Calculus Engine
+  Copyright (c) 2026 孙涛 (suntao) & AI Co-Pilot. All Rights Reserved.
+  Contact: [zoucuilian8@163.com]
+
+  【版权声明】
+  本程序为 孙涛 与DP AI 助手历经数百次对话深度定制开发之原创成果。
+  本程序受《著作权法》严格保护，未经作者明确书面许可，严禁任何组织或个人
+  将本代码用于商业倒卖、盗版分发或抹除原作者声明。
+  
+  版权最终解释权归 孙涛 所有。
+  ==============================================================================
+-->
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+	<title>Finger Fractal - Calculus Engine</title>
+	<style>
+		body { margin: 0; padding: 0; overflow: hidden; background-color: #111; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+		
+		#ui { position: absolute; bottom: 5px; left: 5px; right: 5px; z-index: 10; background: rgba(10,10,10,0.85); padding: 6px; border-radius: 8px; display: flex; gap: 3px; align-items: center; backdrop-filter: blur(5px); }
+		input[type="text"] { flex: 1; padding: 8px 6px; font-size: 14px; border-radius: 4px; border: 1px solid #444; background: #222; color: white; min-width: 40px; outline: none; }
+		input[type="text"]:focus { border-color: #64ffda; }
+		button { padding: 7px 6px; font-size: 13px; cursor: pointer; border-radius: 4px; border: none; color: white; font-weight: bold; text-align: center; user-select: none; -webkit-touch-callout: none; display: flex; justify-content: center; align-items: center; min-width: 32px;}
+		button:active { opacity: 0.7; }
+		
+		#ref-panel { display: none; position: absolute; bottom: 55px; left: 5px; right: 5px; z-index: 100; background: rgba(20, 20, 20, 0.95); border: 1px solid #555; border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.5; font-family: monospace; box-shadow: 0 4px 20px rgba(0,0,0,0.8); flex-direction: column; gap: 6px; pointer-events: none; backdrop-filter: blur(5px); }
+		.ref-row { display: flex; align-items: baseline; gap: 8px; }
+		.ref-tag { font-weight: bold; white-space: nowrap; font-size: 12px; }
+		.ref-text { color: #ddd; word-spacing: 2px; }
+
+		#modal { display: none; position: absolute; top: 5%; left: 2%; width: 96%; height: 80vh; background: rgba(20,20,20,0.98); border: 1px solid #444; border-radius: 12px; z-index: 20; color: #ddd; font-size: 12px; padding: 12px; flex-direction: column; font-family: monospace; box-shadow: 0 10px 30px rgba(0,0,0,0.8); backdrop-filter: blur(10px); }
+		
+		.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 5px; }
+		.modal-header h3 { margin: 0; color: #2ecc71; font-size: 16px; }
+		.action-btns { display: flex; gap: 5px; flex-wrap: wrap; }
+		.action-btns button { padding: 6px 10px; font-size: 12px; border-radius: 6px; }
+		
+		.nav-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 10px; flex-wrap: wrap; gap: 5px;}
+		.tab-bar { display: flex; gap: 5px; }
+		.tab-bar button { padding: 8px 15px; border-radius: 6px; background: #333; font-size: 13px; transition: background 0.2s; }
+		.tab-bar button.active { background: #2ecc71; color: #111; }
+		
+		.pagination { display: flex; gap: 5px; align-items: center; }
+		.pagination button { padding: 4px 10px; border-radius: 4px; background: #444; font-size: 12px; }
+		.pagination span { color: #aaa; font-size: 12px; }
+
+		.search-box { margin-bottom: 10px; }
+		.search-box input { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 6px; border: 1px solid #555; background: #111; color: #fff; outline: none; font-size: 13px; }
+
+		#modal-content { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; overflow-y: auto; padding-bottom: 15px; flex: 1; align-content: start; }
+		.formula-item { display: flex; justify-content: space-between; align-items: center; height: 38px; background: #333; border: 1px solid #555; border-radius: 6px; cursor: pointer; color: #fff; font-size: 11px; white-space: nowrap; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; padding: 0 6px; }
+		.formula-item:active { background: #2ecc71; border-color: #2ecc71; }
+		.num-tag { color: #f1c40f; font-weight: bold; margin-right: 4px; }
+		.del-btn { color: #e74c3c; font-size: 14px; margin-left: 4px; cursor: pointer; padding: 2px; }
+
+		canvas { display: block; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); touch-action: none; }
+		
+		#qr-container { position: absolute; bottom: 55px; left: 10px; width: 65px; height: 65px; opacity: 0.6; z-index: 6; pointer-events: none; border-radius: 4px; background: #fff; padding: 3px; box-shadow: 0 2px 10px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; }
+		#qr-container canvas, #qr-container img { width: 100% !important; height: 100% !important; display: block; }
+
+		#rotBtn { position: absolute; top: 10px; right: 10px; width: 42px; height: 42px; border-radius: 50%; background: rgba(10,10,10,0.7); color: #64ffda; font-size: 22px; font-weight: bold; border: 1px solid #444; backdrop-filter: blur(5px); display: flex; justify-content: center; align-items: center; padding: 0; cursor: pointer; z-index: 10; user-select: none; -webkit-touch-callout: none; transition: transform 0.2s ease; }
+		#rotBtn:active { opacity: 0.7; }
+
+		/* 摇杆模式指示器 */
+		#hud { display: none; position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); border: 1px solid #444; padding: 8px 12px; border-radius: 6px; color: #64ffda; font-family: monospace; font-size: 13px; z-index: 10; pointer-events: none; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+		#hud span { color: #fff; }
+	</style>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+<div id="ui">
+	<input type="text" id="exprInput" value="z**2" placeholder="Formula or ID">
+	<button onclick="toggleModal()" style="background:#3498db; font-size: 16px;">📚</button>
+	<button onclick="setMode('mandelbrot')" id="mBtn" style="background:#7f8c8d;">M</button>
+	<button onclick="setMode('domain')" id="domBtn" style="background:#00bcd4;">O</button>
+	<button onclick="setMode('julia')" id="jBtn" style="background:#8e44ad;">J</button>
+	<button onclick="setMode('newton')" id="nBtn" style="background:#e74c3c;">N</button>
+	<button id="pBtn" onclick="toggleParamMode()" style="background:#555;">P</button>
+</div>
+
+<button id="rotBtn" onclick="rotateView()" title="Rotate 90°">↻</button>
+
+<div id="hud">
+	K (X): <span id="hudK">0.00</span> | P (Y): <span id="hudP">0.00</span>
+</div>
+
+<div id="modal">
+	<div class="modal-header">
+		<h3>📚 Formula Library</h3>
+		<div class="action-btns">
+			<button onclick="saveFormula()" style="background:#f1c40f; color:#333;">Save Current</button>
+			<button onclick="exportFormulas()" style="background:#2ecc71; color:#111;">Export</button>
+			<button onclick="triggerImport()" style="background:#9b59b6;">Import</button>
+			<button onclick="toggleModal()" style="background:#555;">✕</button>
+		</div>
+	</div>
+	<div class="nav-row">
+		<div class="tab-bar">
+			<button id="tabBuiltin" onclick="switchTab('builtin')" class="active">Built-in</button>
+			<button id="tabUser" onclick="switchTab('user')">My Formulas (<span id="userCount">0</span>)</button>
+		</div>
+		<div class="pagination" id="pagination"></div>
+	</div>
+	<div class="search-box">
+		<input type="text" id="searchInput" placeholder="Search ID, name or formula..." oninput="filterFormulas()">
+	</div>
+	<div id="modal-content"></div>
+	<!-- 版权水印 -->
+	<div style="text-align: center; color: #666; font-size: 11px; margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; pointer-events: none; font-family: monospace; letter-spacing: 1px;">
+		© 2026 Suntao. All Rights Reserved.
+	</div>
+</div>
+
+<div id="ref-panel">
+	<div class="ref-row"><span class="ref-tag" style="color:#00e5ff;">1. Complex:</span><span class="ref-text">rea ima ang abs norm conj fract</span></div>
+	<div class="ref-row"><span class="ref-tag" style="color:#ffb300;">2. Trunc:</span><span class="ref-text">relu mod mod1 sgn sign sst clp clamp floor ceil round</span></div>
+	<div class="ref-row"><span class="ref-tag" style="color:#76ff03;">3. Standard:</span><span class="ref-text">sin cos tan exp log sqrt</span></div>
+	<div class="ref-row"><span class="ref-tag" style="color:#ff4081;">4. Hyper/Adv:</span><span class="ref-text">sinh cosh tanh asinh acosh atanh lamw eta bessel gamma</span></div>
+</div>
+
+<input type="file" id="fileInput" style="display:none;" accept=".txt,.json" onchange="importFormulas(event)">
+<div id="qr-container"></div>
+
+<canvas id="glcanvas"></canvas>
+
+<script>
+	// 控制台防伪警告
+	console.log("%c⚠️ 版权警告：本程序受版权保护！", "color: #e74c3c; font-size: 24px; font-weight: bold; text-shadow: 1px 1px 2px black;");
+	console.log("%c此引擎由 孙涛 (suntao) 与 AI 深度定制开发，未经授权严禁商用、倒卖或抹除版权。", "color: #f1c40f; font-size: 14px;");
+
+	const canvas = document.getElementById('glcanvas');
+	const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true, antialias: true });
+	if (!gl) alert('WebGL not supported on this browser!');
+
+	const exprInput = document.getElementById('exprInput');
+	const refPanel = document.getElementById('ref-panel');
+	const qrContainer = document.getElementById('qr-container');
+	const pBtn = document.getElementById('pBtn');
+	const modal = document.getElementById('modal');
+	const hud = document.getElementById('hud');
+	const hudK = document.getElementById('hudK');
+	const hudP = document.getElementById('hudP');
+	
+	let qrcodeObj = null;
+	let isDrawing = false;
+	let dragAnchor = null;
+	let currentTab = 'builtin';
+	let currentPage = 1;
+	const ITEMS_PER_PAGE = 100;
+	let allFormulaNodes = [];
+	
+	let isParamMode = false; // 是否开启摇杆模式
+	let kCoeff = 0.0;
+	let pCoeff = 0.0;
+
+	const MIN_ZOOM = 0.005;
+	const ZOOM_FACTOR = 0.3;
+	const FIRST_ZOOM = 0.3;
+
+	let mathMode = 'julia'; 
+	let renderMode = 0; 
+	let mag_center = [-0.5, 0.0]; 
+	let mag_zoom = 3.0; 
+	let juliaC = [-0.8, 0.156]; 
+	let domainOffset = [0.0, 0.0]; 
+	let twistParam = [0.0, 0.0];
+	let baseFormula = "z**2";
+	let rotation = 0;
+
+	const DEFAULT_FORMULAS = { "1": "z**2", "2": "z**3", "3": "z**4", "4": "z**5", "5": "z**6", "6": "(abs(rea(z))+i*abs(ima(z)))**2", "7": "conj(z)**2", "8": "abs(rea(z**2)) + i * ima(z**2)", "9": "(abs(rea(z)) - i*abs(ima(z)))**2", "10": "abs(z)**2", "11": "z**2 + 0.5/z", "12": "z**3 + 0.1/z", "13": "z**2 + 0.2/(z**2 + 0.1)", "14": "z**2 * exp(-abs(z))", "15": "z**3 / (z**2 + 0.5)", "16": "z**2 + 0.1/(z**3 + 0.1)", "17": "z**4 + 0.2/z", "18": "z**2 + 0.5/(z + 0.5)", "19": "z**3 * exp(1/z)", "20": "z**2 - 0.5/z", "21": "sin(z) * cos(z)", "22": "z**2 + sin(z)", "23": "z**2 + 0.5*cos(z)", "24": "sin(z**2)", "25": "cos(z**2)", "26": "z**2 * sin(z)", "27": "sin(z) / z", "28": "tan(z)", "29": "z**2 + 0.2*tan(z)", "30": "z**3 + sin(z)", "31": "z**2 + cos(z**2)", "32": "sin(z) + cos(z)", "33": "z**2 * tan(z)", "34": "sin(z) * exp(-z)", "35": "z**2 + sin(1/z)", "36": "z**2 + 0.5*cos(1/z)", "37": "z**2 * sin(z**2)", "38": "z**3 + cos(z)", "39": "z**4 + sin(z)", "40": "z**2 + 0.1*tan(1/z)", "41": "exp(z)", "42": "z**2 * exp(-z)", "43": "log(z)", "44": "z**2 + exp(-abs(z))", "45": "sqrt(z) + z**2", "46": "z**2 * sqrt(z)", "47": "z**2 + log(z)", "48": "z**3 + exp(z)", "49": "exp(z) / z", "50": "z**2 * exp(z)", "51": "z**2 * floor(z)", "52": "z**2 + 0.5*sgn(z)", "53": "z**2 + 0.2*mod1(z)", "54": "z**2 + 0.1*floor(rea(z)) + 0.1*i*floor(ima(z))", "55": "z**2 + 0.2*ang(z)", "56": "z**2 + relu(z)", "57": "z**2 + conj(z)", "58": "z**2 * sin(1/z)", "59": "z**2 + 0.1/z + 0.5*sin(z)", "60": "z**3 + z**2 - 1", "61": "z**4 + 0.5*z", "62": "sin(exp(z))", "63": "z**2 + rea(z)", "64": "z**2 + ima(z)", "65": "z**2 + 0.5*abs(z)", "66": "z**3 + 0.5*j", "67": "sin(z**3)", "68": "z**2 * cos(z)", "69": "z**2 + 0.5*sinh(z)", "70": "z**2 + 0.5*cosh(z)", "71": "z**2 + tan(z)*0.1", "72": "z**2 + 0.5*asin(z)", "73": "z**2 + 0.5*acos(z)", "74": "z**2 + 0.5*atan(z)", "75": "z**2 + sinh(z)", "76": "z**2 + cosh(z)", "77": "z**2 + asinh(z)", "78": "z**2 + acosh(z)", "79": "z**3 + atan(z)", "80": "z**2 * sinh(z)", "81": "z**3 + sin(z)*cos(z)", "82": "z**2 + exp(-z)*sin(z)", "83": "z**2 + 0.5*log(z)*sin(z)", "84": "z**3 + 0.2*cos(z)", "85": "z**2 * (sin(z) + cos(z))", "86": "z**2 + 0.5*tanh(z)", "87": "z**2 + 0.1/(sin(z) + 2)", "88": "z**2 + 0.1/(cos(z) + 2)", "89": "z**3 + exp(-z)", "90": "z**4 - 0.5*z**2", "91": "z**2 + 0.5*lamw(z)", "92": "z**2 + 0.2*eta(z)", "93": "z**2 + 0.5*bessel(z)", "94": "z**2 + 0.1*gamma(z+1.0)", "95": "z**3 + 0.1*lamw(z)", "96": "z**2 + 0.1*eta(z) + 0.1*sin(z)", "97": "sin(z**2) + 0.5*bessel(z)", "98": "cos(z**2) + 0.1*gamma(z+1.0)", "99": "z**2 + 0.1*lamw(z) + 0.1*eta(z)", "100": "z**3 + 0.2*bessel(z) + 0.1*gamma(z+1.0)" };
+	
+	const FORMULA_NAMES = { 
+		"1": "Mandel", "2": "Cubic", "3": "Quartic", "4": "Quintic", "5": "Sextic", 
+		"6": "Burner", "7": "Pinwheel", "8": "Celtic", "9": "R-Burn", "10": "Bubble", 
+		"11": "Mag-Jet", "12": "Mag-Var", "13": "Nested", "14": "Gauss", "15": "Poly-Div", 
+		"16": "Cub-Sing", "17": "Qu-Inv", "18": "Hole", "19": "Exp-Inv", "20": "Neg-Jet", 
+		"21": "Moire", "22": "Lace", "23": "Fuzzy", "24": "S-Cell", "25": "C-Cell", 
+		"26": "Chaos", "27": "Singer", "28": "Inf-Persp", "29": "Tan-Pert", "30": "Cub-Sine", 
+		"31": "Quad-Cos", "32": "S-Stack", "33": "Tan-Vort", "34": "D-Sine", "35": "Burst", 
+		"36": "Burst-Cos", "37": "Hi-Sine", "38": "Cub-Cos", "39": "Qu-Sine", "40": "Inv-Tan", 
+		"41": "E-Ripple", "42": "Nebula", "43": "Spiral", "44": "G-Exp", "45": "Root", 
+		"46": "Hi-Root", "47": "Log-Stack", "48": "Cub-Exp", "49": "E-Divide", "50": "E-Burst", 
+		"51": "Cyber", "52": "Origami", "53": "Tiles", "54": "Grid", "55": "Galaxy", 
+		"56": "R-Cut", "57": "Mirror", "58": "C-Burst", "59": "Stitch", "60": "P-Stack", 
+		"61": "Mix", "62": "D-Trans", "63": "F-Real", "64": "F-Imag", "65": "Radius", 
+		"66": "I-Offset", "67": "H-Sine", "68": "C-Twist", "69": "Stretch", "70": "Expand", 
+		"71": "T-Perturb", "72": "AS-Twist", "73": "AC-Tear", "74": "AT-Merge", "75": "Sinh", 
+		"76": "Cosh", "77": "Asinh", "78": "Acosh", "79": "Cub-Atan", "80": "Sin-Hyp", 
+		"81": "Ortho", "82": "E-Inter", "83": "L-Inter", "84": "C-Perturb", "85": "2-Sine", 
+		"86": "Tanh", "87": "S-Sing", "88": "C-Sing", "89": "Cub-Decay", "90": "Qu-Minus2", 
+		"91": "Lam-W", "92": "Eta", "93": "Bessel", "94": "Gamma", "95": "Cub-Lam", 
+		"96": "R-Sine", "97": "B-Sine", "98": "G-Cos", "99": "U-Trans", "100": "Final" 
+	};
+
+	let userFormulas = JSON.parse(localStorage.getItem('myFractals') || '{}');
+	let savedFormulas = Object.assign({}, DEFAULT_FORMULAS, userFormulas);
+
+	exprInput.addEventListener('focus', () => { refPanel.style.display = 'flex'; });
+	exprInput.addEventListener('blur', () => { setTimeout(() => { refPanel.style.display = 'none'; }, 100); });
+
+	function toggleParamMode() {
+		isParamMode = !isParamMode;
+		if (!isParamMode) {
+			kCoeff = 0.0;
+			pCoeff = 0.0;
+			render();
+			updateQRCode();
+			hud.style.display = 'none';
+			pBtn.style.background = '#555';
+			pBtn.textContent = 'P';
+		} else {
+			hud.style.display = 'block';
+			hudK.textContent = kCoeff.toFixed(2);
+			hudP.textContent = pCoeff.toFixed(2);
+			pBtn.style.background = '#1abc9c';
+			pBtn.textContent = 'P*';
+		}
+	}
+
+	function toggleModal() {
+		let isOpen = modal.style.display === 'flex';
+		modal.style.display = isOpen ? 'none' : 'flex';
+		if (!isOpen) {
+			document.getElementById('searchInput').value = '';
+			switchTab(currentTab); 
+		}
+	}
+
+	function switchTab(tab) {
+		currentTab = tab;
+		currentPage = 1;
+		document.getElementById('tabBuiltin').className = tab === 'builtin' ? 'active' : '';
+		document.getElementById('tabUser').className = tab === 'user' ? 'active' : '';
+		document.getElementById('userCount').textContent = Object.keys(userFormulas).length;
+		initMenu();
+	}
+
+	function initMenu() {
+		const c = document.getElementById('modal-content'); 
+		c.innerHTML = ''; 
+		allFormulaNodes = [];
+		
+		let source = currentTab === 'builtin' ? DEFAULT_FORMULAS : userFormulas;
+		let isUser = currentTab === 'user';
+		
+		let keys = Object.keys(source).sort((a, b) => {
+			let na = parseInt(a.replace(/^f/, '')); let nb = parseInt(b.replace(/^f/, ''));
+			if (isNaN(na)) na = 99999; if (isNaN(nb)) nb = 99999;
+			return na - nb;
+		});
+
+		let totalItems = keys.length;
+		let totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
+		if (currentPage > totalPages) currentPage = totalPages;
+		
+		let startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+		let endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalItems);
+		let pageKeys = keys.slice(startIndex, endIndex);
+
+		let pagHTML = '';
+		if (totalPages > 1) {
+			pagHTML += `<button onclick="changePage(-1)" ${currentPage === 1 ? 'disabled' : ''}>Prev</button>`;
+			pagHTML += `<span> ${currentPage} / ${totalPages} </span>`;
+			pagHTML += `<button onclick="changePage(1)" ${currentPage === totalPages ? 'disabled' : ''}>Next</button>`;
+		}
+		document.getElementById('pagination').innerHTML = pagHTML;
+
+		for (let k of pageKeys) {
+			let name = isUser ? "Custom" : (FORMULA_NAMES[k] || "Unnamed");
+			let s = document.createElement('span'); 
+			s.className = 'formula-item'; 
+			
+			let titleSpan = document.createElement('span');
+			titleSpan.innerHTML = `<span class="num-tag">${k}</span>${name}`;
+			s.appendChild(titleSpan);
+			
+			if (isUser) {
+				let del = document.createElement('span');
+				del.className = 'del-btn';
+				del.textContent = '×';
+				del.onclick = (e) => {
+					e.stopPropagation();
+					if(confirm("Are you sure you want to delete formula [" + k + "]?")) {
+						delete userFormulas[k];
+						localStorage.setItem('myFractals', JSON.stringify(userFormulas));
+						savedFormulas = Object.assign({}, DEFAULT_FORMULAS, userFormulas);
+						initMenu();
+					}
+				};
+				s.appendChild(del);
+			}
+
+			s.onclick = function(e) { 
+				if(e.target.className === 'del-btn') return;
+				e.stopPropagation(); 
+				selectFormula(k); 
+			}; 
+			c.appendChild(s); 
+			allFormulaNodes.push({ id: k, name: name, expr: source[k], element: s });
+		}
+		filterFormulas();
+	}
+
+	function changePage(dir) {
+		currentPage += dir;
+		initMenu();
+	}
+
+	function filterFormulas() {
+		let q = document.getElementById('searchInput').value.toLowerCase().trim();
+		for (let node of allFormulaNodes) {
+			let match = node.id.toLowerCase().includes(q) || node.name.toLowerCase().includes(q) || node.expr.toLowerCase().includes(q);
+			node.element.style.display = match ? 'flex' : 'none';
+		}
+	}
+
+	function selectFormula(k) { 
+		modal.style.display = 'none'; 
+		document.getElementById('exprInput').value = k; 
+		updateFormula(); 
+	}
+
+	function saveFormula() { 
+		let expr = document.getElementById('exprInput').value.trim(); 
+		if(!expr || /^[a-zA-Z]?\d+$/.test(expr)) { 
+			alert("Please enter a valid formula first (cannot be a pure number or ID)."); 
+			return; 
+		}
+		let maxId = 100;
+		for (let k in userFormulas) {
+			let num = parseInt(k.replace(/^f/, ''));
+			if (!isNaN(num) && num > maxId) maxId = num;
+		}
+		let newId = String(maxId + 1);
+		
+		let k = prompt("Enter a name or ID for this formula (default starts from 101):", newId); 
+		if (!k) return;
+		k = k.trim();
+		if (!k) return;
+		
+		k = k.replace(/^f/, '');
+		let numCheck = parseInt(k);
+		if (!isNaN(numCheck) && numCheck >= 1 && numCheck <= 100) {
+			alert("IDs 1~100 are reserved for built-in formulas. Please use 101+ or letters.");
+			return;
+		}
+		userFormulas[k] = expr; 
+		localStorage.setItem('myFractals', JSON.stringify(userFormulas)); 
+		savedFormulas = Object.assign({}, DEFAULT_FORMULAS, userFormulas); 
+		alert(`Saved successfully! ID: ${k}`); 
+		switchTab('user');
+	}
+
+	function exportFormulas() { 
+		if (Object.keys(userFormulas).length === 0) {
+			alert("You haven't saved any custom formulas yet.");
+			return;
+		}
+		const d = JSON.stringify(userFormulas, null, 4); 
+		const b = new Blob([d], { type: "text/plain;charset=utf-8" }); 
+		const u = URL.createObjectURL(b); 
+		const a = document.createElement('a'); 
+		a.href = u; 
+		a.download = "my_fractals_backup.json"; 
+		document.body.appendChild(a); 
+		a.click(); 
+		document.body.removeChild(a); 
+		URL.revokeObjectURL(u); 
+	}
+
+	function triggerImport() { 
+		document.getElementById('fileInput').click(); 
+	}
+
+	function importFormulas(e) { 
+		const f = e.target.files[0]; 
+		if(!f) return; 
+		const r = new FileReader(); 
+		r.onload = function(ev) { 
+			try { 
+				const imported = JSON.parse(ev.target.result); 
+				if(typeof imported === 'object'){ 
+					let count = 0;
+					for(let k in imported) {
+						let cleanK = k.replace(/^f/, '');
+						let numCheck = parseInt(cleanK);
+						if (!isNaN(numCheck) && numCheck >= 1 && numCheck <= 100) {
+							userFormulas["imp_" + cleanK] = imported[k];
+						} else {
+							userFormulas[cleanK] = imported[k]; 
+						}
+						count++;
+					}
+					localStorage.setItem('myFractals', JSON.stringify(userFormulas)); 
+					savedFormulas = Object.assign({}, DEFAULT_FORMULAS, userFormulas); 
+					alert(`Import successful! Merged ${count} formulas.`); 
+					switchTab('user');
+				} 
+			} catch(err) { 
+				alert("Import failed: Invalid JSON file format."); 
+			} 
+		}; 
+		r.readAsText(f); 
+		e.target.value = ''; 
+	}
+
+	function rotateView() {
+		rotation = (rotation + 1) % 4;
+		document.getElementById('rotBtn').style.transform = `rotate(${rotation * 90}deg)`;
+		render();
+		updateQRCode();
+	}
+
+	function generateShareLink() {
+		let state = { z: exprInput.value };
+		if (rotation) state.r = rotation;
+		if (Math.abs(kCoeff) > 0.01) state.k = kCoeff.toFixed(2);
+		if (Math.abs(pCoeff) > 0.01) state.p = pCoeff.toFixed(2);
+		let params = new URLSearchParams(state).toString();
+		let baseUrl = window.location.origin + window.location.pathname;
+		return baseUrl + '?' + params;
+	}
+
+	function updateQRCode() {
+		try {
+			let shareUrl = generateShareLink();
+			qrContainer.innerHTML = '';
+			if (typeof QRCode !== 'undefined') {
+				qrcodeObj = new QRCode(qrContainer, {
+					text: shareUrl, width: 130, height: 130,
+					colorDark : "#000000", colorLight : "#ffffff",
+					correctLevel : QRCode.CorrectLevel.L
+				});
+			}
+		} catch(e) {
+			console.warn("QR Code failed to render:", e);
+		}
+	}
+
+	function loadFromUrl() {
+		try {
+			let params = new URLSearchParams(window.location.search);
+			if (params.has('r')) {
+				rotation = (parseInt(params.get('r'), 10) || 0) % 4;
+				if (rotation < 0) rotation += 4;
+				document.getElementById('rotBtn').style.transform = `rotate(${rotation * 90}deg)`;
+			}
+			if (params.has('k')) { kCoeff = parseFloat(params.get('k')) || 0.0; }
+			if (params.has('p')) { pCoeff = parseFloat(params.get('p')) || 0.0; }
+			
+			if (!params.has('z')) { 
+				updateFormula(); 
+				return; 
+			}
+			exprInput.value = params.get('z') || "z**2";
+			baseFormula = exprInput.value; 
+			
+			mathMode = 'julia'; renderMode = 0; mag_zoom = 3.0; mag_center = [-0.5, 0.0]; juliaC = [-0.8, 0.156]; twistParam = [0.0, 0.0];
+			
+			updateButtonColors();
+			let glslCode = compileExpression(baseFormula); 
+			initWebGL(fsSourceTemplate.replace(/\{\{EXPR\}\}/g, glslCode)); 
+			updateQRCode();
+		} catch(e) { 
+			console.error("Invalid formula in URL", e); 
+			updateFormula();
+		}
+	}
+
+	function setMode(mode) { 
+		mathMode = mode; renderMode = 0; mag_zoom = 3.0; mag_center = [-0.5, 0.0]; 
+		domainOffset = [0.0, 0.0]; twistParam = [0.0, 0.0]; dragAnchor = null; 
+		updateButtonColors(); render(); updateQRCode(); 
+	}
+
+	function updateButtonColors() {
+		document.getElementById('mBtn').style.background = (mathMode === 'mandelbrot') ? '#c0392b' : '#7f8c8d';
+		document.getElementById('domBtn').style.background = (mathMode === 'domain') ? '#00838f' : '#00bcd4';
+		document.getElementById('jBtn').style.background = (mathMode === 'julia') ? '#8e44ad' : '#9b59b6';
+		document.getElementById('nBtn').style.background = (mathMode === 'newton') ? '#c0392b' : '#e74c3c';
+	}
+
+	const vsSource = `attribute vec2 a_position; void main() { gl_Position = vec4(a_position, 0.0, 1.0); }`;
+	
+	const fsSourceTemplate = `precision highp float; uniform vec2 u_resolution; uniform int u_maxIter; uniform int u_renderMode; uniform int u_mathMode; uniform int u_rotation; uniform int u_isAdvanced; uniform float u_k; uniform float u_p; uniform vec2 u_juliaC; uniform vec2 u_mag_center; uniform float u_mag_zoom; uniform vec2 u_domain_offset; uniform vec2 u_twist; vec2 c_mul(vec2 a, vec2 b) { return vec2(a.x*b.x - a.y*b.y, a.x*b.y + a.y*b.x); } vec2 c_sq(vec2 a) { return vec2(a.x*a.x - a.y*a.y, 2.0*a.x*a.y); } vec2 c_div(vec2 a, vec2 b) { return c_mul(a, vec2(b.x, -b.y)) / (dot(b, b) + 1e-10); } vec2 c_log(vec2 a) { return vec2(log(length(a) + 1e-8), atan(a.y, a.x)); } vec2 c_exp(vec2 a) { return exp(a.x) * vec2(cos(a.y), sin(a.y)); } vec2 c_pow(vec2 a, vec2 b) { return c_exp(c_mul(b, c_log(a))); } vec2 c_abs(vec2 a) { return vec2(length(a), 0.0); } vec2 c_conj(vec2 a) { return vec2(a.x, -a.y); } vec2 c_real(vec2 a)  { return vec2(a.x, 0.0); } vec2 c_imag(vec2 a)  { return vec2(a.y, 0.0); } vec2 c_angle(vec2 a) { return vec2(atan(a.y, a.x), 0.0); } vec2 c_norm(vec2 a)  { return vec2(dot(a, a), 0.0); } vec2 c_fract(vec2 a) { return vec2(a.x - floor(a.x), a.y - floor(a.y)); } vec2 c_relu(vec2 a)  { return vec2(max(a.x, 0.0), max(a.y, 0.0)); } vec2 c_mod(vec2 a)    { return vec2(mod(a.x, 1.0), mod(a.y, 1.0)); } vec2 c_sign(vec2 a)   { return vec2(sign(a.x), sign(a.y)); } vec2 c_smooth(vec2 a) { return vec2(smoothstep(-1.0, 1.0, a.x), smoothstep(-1.0, 1.0, a.y)); } vec2 c_clamp(vec2 a)  { return vec2(clamp(a.x, -1.0, 1.0), clamp(a.y, -1.0, 1.0)); } vec2 c_sqrt(vec2 a) { float r = sqrt(length(a)); float theta = atan(a.y, a.x) * 0.5; return vec2(r * cos(theta), r * sin(theta)); } vec2 c_floor(vec2 a) { return vec2(floor(a.x), floor(a.y)); } vec2 c_ceil(vec2 a)  { return vec2(ceil(a.x), ceil(a.y)); } vec2 c_round(vec2 a) { return vec2(floor(a.x + 0.5), floor(a.y + 0.5)); } vec2 c_sin(vec2 a) { float b = (exp(a.y) - exp(-a.y)) / 2.0; float c = (exp(a.y) + exp(-a.y)) / 2.0; return vec2(sin(a.x)*c, cos(a.x)*b); } vec2 c_cos(vec2 a) { float b = (exp(a.y) - exp(-a.y)) / 2.0; float c = (exp(a.y) + exp(-a.y)) / 2.0; return vec2(cos(a.x)*c, -sin(a.x)*b); } vec2 c_tan(vec2 a) { return c_div(c_sin(a), c_cos(a)); } vec2 c_sinh(vec2 a) { float c = (exp(a.x) - exp(-a.x)) / 2.0; float s = (exp(a.x) + exp(-a.x)) / 2.0; return vec2(c * cos(a.y), s * sin(a.y)); } vec2 c_cosh(vec2 a) { float c = (exp(a.x) + exp(-a.x)) / 2.0; float s = (exp(a.x) - exp(-a.x)) / 2.0; return vec2(c * cos(a.y), s * sin(a.y)); } vec2 c_tanh(vec2 a) { return c_div(c_sinh(a), c_cosh(a)); } vec2 c_asin(vec2 z) { vec2 iz = vec2(-z.y, z.x); vec2 z2 = c_sq(z); vec2 root = c_sqrt(vec2(1.0 - z2.x, -z2.y)); vec2 log_val = c_log(iz + root); return vec2(log_val.y, -log_val.x); } vec2 c_acos(vec2 z) { vec2 a = c_asin(z); return vec2(1.5707963 - a.x, -a.y); } vec2 c_atan(vec2 z) { vec2 num = vec2(z.x, z.y + 1.0); vec2 den = vec2(-z.x, 1.0 - z.y); vec2 log_val = c_log(c_div(num, den)); return vec2(-0.5 * log_val.y, 0.5 * log_val.x); } vec2 c_asinh(vec2 z) { vec2 z2 = c_sq(z); vec2 root = c_sqrt(vec2(z2.x + 1.0, z2.y)); return c_log(z + root); } vec2 c_acosh(vec2 z) { vec2 z2 = c_sq(z); vec2 root = c_sqrt(vec2(z2.x - 1.0, z2.y)); return c_log(z + root); } vec2 c_atanh(vec2 z) { vec2 num = vec2(1.0 + z.x, z.y); vec2 den = vec2(1.0 - z.x, -z.y); return c_mul(vec2(0.5, 0.0), c_log(c_div(num, den))); } vec2 c_lamw(vec2 z) { vec2 w = vec2(0.5, 0.0); for(int i=0; i<10; i++) { vec2 ew = c_exp(w); vec2 f = c_mul(w, ew) - z; vec2 df = c_mul(ew, w + vec2(1.0, 0.0)); w = w - c_div(f, df); } return w; } vec2 c_eta(vec2 z) { vec2 sum = vec2(0.0); for(int n=1; n<=10; n++) { float sign = (mod(float(n), 2.0) == 0.0) ? -1.0 : 1.0; vec2 term = c_div(vec2(sign, 0.0), c_pow(vec2(float(n), 0.0), z)); sum += term; } return sum; } vec2 c_bessel(vec2 z) { vec2 sum = vec2(0.0); vec2 z2 = c_sq(z) * 0.25; vec2 term = vec2(1.0, 0.0); for(int k=0; k<8; k++) { sum += term; term = c_mul(term, -z2) / float((k+1)*(k+1)); } return sum; } vec2 c_gamma_pos(vec2 z) { vec2 z1 = z - vec2(1.0, 0.0); vec2 x = vec2(0.99999999999980993, 0.0); x += vec2(676.5203681218851, 0.0) / (z1 + vec2(1.0, 0.0)); x += vec2(-1259.1392167224028, 0.0) / (z1 + vec2(2.0, 0.0)); x += vec2(771.32342877765313, 0.0) / (z1 + vec2(3.0, 0.0)); x += vec2(-176.61502916214059, 0.0) / (z1 + vec2(4.0, 0.0)); x += vec2(12.507343278686905, 0.0) / (z1 + vec2(5.0, 0.0)); x += vec2(-0.13857109526572012, 0.0) / (z1 + vec2(6.0, 0.0)); x += vec2(9.9843695780195716e-6, 0.0) / (z1 + vec2(7.0, 0.0)); x += vec2(1.5056327351493116e-7, 0.0) / (z1 + vec2(8.0, 0.0)); vec2 t = z1 + vec2(7.5, 0.0); return vec2(2.50662827463, 0.0) * c_pow(t, z1 + vec2(0.5, 0.0)) * c_exp(-t) * x; } vec2 c_gamma(vec2 z) { if (z.x < 0.5) { vec2 one_minus_z = vec2(1.0, 0.0) - z; return c_div(vec2(3.14159265, 0.0), c_mul(c_sin(vec2(3.14159265, 0.0) * z), c_gamma_pos(one_minus_z))); } return c_gamma_pos(z); } vec2 twist_Z(vec2 Z) { float r = length(Z); float a = atan(Z.y, Z.x); a += u_twist.x; if (u_twist.y != 0.0) { r = pow(r, 1.0 + u_twist.y); } return vec2(r * cos(a), r * sin(a)) + u_domain_offset; } 
+	vec2 f(vec2 Z, vec2 c) { return {{EXPR}}; }
+	vec2 df(vec2 Z, vec2 c) { float h = 0.0001; return (f(Z + vec2(h, 0.0), c) - f(Z - vec2(h, 0.0), c)) / (2.0 * h); }
+	vec3 get_domain_color(vec2 Z) { vec2 W = f(Z, vec2(0.0)); float angle = atan(W.y, W.x); float mag = length(W); if (mag < 1e-5) return vec3(0.0); float hue = (angle + 3.14159265) / 6.2831853; vec3 color = 0.5 + 0.5 * cos(6.2831853 * (hue + vec3(0.0, 0.33, 0.67))); float brightness = clamp(log(mag + 1.0) * 0.8, 0.1, 1.0); return color * brightness; } 
+	int get_iters_complex(vec2 Z, vec2 c) { for (int i = 0; i < 1000; i++) { if (i >= u_maxIter) break; Z = f(Z, c) + c; if (Z.x != Z.x || Z.y != Z.y) return i; if (dot(Z, Z) > 100.0) return i; } return u_maxIter; } 
+	int get_iters_advanced(vec2 Z, vec2 c, float k, float p) {
+		vec2 Z_prev1 = vec2(0.0, 0.0);
+		vec2 Z_prev2 = vec2(0.0, 0.0);
+		for (int i = 0; i < 1000; i++) {
+			if (i >= u_maxIter) break;
+			vec2 fz = f(Z, c);
+			vec2 dfz = vec2(0.0);
+			if (abs(k) > 0.001) dfz = df(Z, c);
+			
+			vec2 non_linear = vec2(0.0);
+			if (abs(p) > 0.001) {
+				vec2 denom = Z_prev2 + vec2(0.5, 0.0);
+				non_linear = c_div(Z_prev1, denom);
+			}
+			
+			vec2 Z_new = fz + k * dfz + p * non_linear + c;
+			if (Z_new.x != Z_new.x || Z_new.y != Z_new.y) return i;
+			if (dot(Z_new, Z_new) > 100.0) return i;
+			
+			Z_prev2 = Z_prev1;
+			Z_prev1 = Z;
+			Z = Z_new;
+		}
+		return u_maxIter;
+	} 
+	int get_iters_newton(vec2 Z, vec2 c) { for (int i = 0; i < 1000; i++) { if (i >= u_maxIter) break; vec2 Z_next = f(Z, c) + c * 0.1; if (Z_next.x != Z_next.x || Z_next.y != Z_next.y) return i; if (dot(Z_next - Z, Z_next - Z) < 1e-7) return i; Z = Z_next; if (length(Z) > 1000.0) return i; } return u_maxIter; } 
+	vec3 get_color(int iter) { if (iter == u_maxIter) return vec3(0.0); if (u_mathMode == 3) { float t = float(iter) / 15.0; return 0.5 + 0.5 * cos(6.28 * (t + vec3(0.0, 0.33, 0.67))); } float t = float(iter) / 30.0; return 0.5 + 0.5 * cos(6.28 * (t + vec3(0.0, 0.33, 0.67))); } 
+	void main() { 
+		float base = min(u_resolution.x, u_resolution.y); 
+		vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / base; 
+		vec2 ruv = uv; 
+		if (u_rotation == 1) ruv = vec2(-uv.y, uv.x); 
+		else if (u_rotation == 2) ruv = vec2(-uv.x, -uv.y); 
+		else if (u_rotation == 3) ruv = vec2(uv.y, -uv.x); 
+		vec2 z_plane = ruv * 3.0; 
+		vec2 c_plane = ruv * 3.0 + vec2(-0.5, 0.0); 
+		if (u_renderMode == 1) { c_plane = ruv * u_mag_zoom + u_mag_center; } 
+		vec3 finalColor = vec3(0.0); 
+		if (u_mathMode == 0) { 
+			if (u_isAdvanced == 1) { finalColor = get_color(get_iters_advanced(vec2(0.0001, 0.0001), c_plane, u_k, u_p)); } 
+			else { finalColor = get_color(get_iters_complex(vec2(0.0001, 0.0001), c_plane)); } 
+		} 
+		else if (u_mathMode == 1) { finalColor = get_domain_color(twist_Z(z_plane)); } 
+		else if (u_mathMode == 2) { 
+			if (u_isAdvanced == 1) { finalColor = get_color(get_iters_advanced(z_plane, u_juliaC, u_k, u_p)); } 
+			else { finalColor = get_color(get_iters_complex(z_plane, u_juliaC)); } 
+		} 
+		else if (u_mathMode == 3) { finalColor = get_color(get_iters_newton(z_plane, u_juliaC)); } 
+		if (u_mathMode == 2 || u_mathMode == 3) { 
+			int wm_iter = get_iters_complex(vec2(0.0001, 0.0001), c_plane); 
+			if (wm_iter == u_maxIter) { finalColor = mix(finalColor, vec3(0.02, 0.04, 0.08), 0.15); } 
+			else { 
+				float dist_to_edge = float(u_maxIter - wm_iter) / float(u_maxIter); 
+				if (dist_to_edge < 0.1) { float glow = smoothstep(0.1, 0.0, dist_to_edge); finalColor += vec3(0.04, 0.02, 0.06) * glow; } 
+			} 
+		} 
+		gl_FragColor = vec4(finalColor, 1.0); 
+	}`;
+
+	function createShader(gl, type, source) { const s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s); if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)){ alert(gl.getShaderInfoLog(s)); return null; } return s; }
+	let program;
+	function initWebGL(fsSource) { 
+		try {
+			const vs = createShader(gl, gl.VERTEX_SHADER, vsSource); 
+			const fs = createShader(gl, gl.FRAGMENT_SHADER, fsSource); 
+			if(!vs || !fs) return; 
+			if(program) gl.deleteProgram(program); 
+			program = gl.createProgram(); 
+			gl.attachShader(program, vs); 
+			gl.attachShader(program, fs); 
+			gl.linkProgram(program); 
+			if (!gl.getProgramParameter(program, gl.LINK_STATUS)) { 
+				console.error("Shader link failed:", gl.getProgramInfoLog(program)); 
+				program = null; 
+				return; 
+			} 
+			gl.useProgram(program); 
+			const b = gl.createBuffer(); 
+			gl.bindBuffer(gl.ARRAY_BUFFER, b); 
+			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW); 
+			const l = gl.getAttribLocation(program, "a_position"); 
+			gl.enableVertexAttribArray(l); 
+			gl.vertexAttribPointer(l, 2, gl.FLOAT, false, 0, 0); 
+			render(); 
+		} catch(e) {
+			console.error("WebGL Init failed:", e);
+		}
+	}
+
+	function render() { 
+		if (!program) return; 
+		const dpr = Math.min(window.devicePixelRatio || 1, 2);
+		const w = Math.max(1, Math.round(window.innerWidth * dpr));
+		const h = Math.max(1, Math.round(window.innerHeight * dpr));
+		if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+		canvas.style.width = '100vw'; canvas.style.height = '100vh'; 
+		gl.viewport(0, 0, canvas.width, canvas.height); 
+		
+		let mathModeInt = 0; 
+		if (mathMode === 'domain') mathModeInt = 1; 
+		else if (mathMode === 'julia') mathModeInt = 2; 
+		else if (mathMode === 'newton') mathModeInt = 3; 
+		
+		let maxIter = 150;
+		if (renderMode === 1) { maxIter = Math.min(600, Math.floor(150 + 150 * Math.log10(3.0 / Math.max(mag_zoom, 1e-6)))); }
+		
+		let isAdvanced = (Math.abs(kCoeff) > 0.001 || Math.abs(pCoeff) > 0.001) ? 1 : 0;
+
+		gl.uniform2f(gl.getUniformLocation(program, "u_resolution"), canvas.width, canvas.height); 
+		gl.uniform1i(gl.getUniformLocation(program, "u_maxIter"), maxIter); 
+		gl.uniform1i(gl.getUniformLocation(program, "u_renderMode"), renderMode); 
+		gl.uniform1i(gl.getUniformLocation(program, "u_mathMode"), mathModeInt); 
+		gl.uniform1i(gl.getUniformLocation(program, "u_rotation"), rotation); 
+		gl.uniform1i(gl.getUniformLocation(program, "u_isAdvanced"), isAdvanced);
+		gl.uniform1f(gl.getUniformLocation(program, "u_k"), kCoeff); 
+		gl.uniform1f(gl.getUniformLocation(program, "u_p"), pCoeff); 
+		gl.uniform2f(gl.getUniformLocation(program, "u_juliaC"), juliaC[0], juliaC[1]); 
+		gl.uniform2f(gl.getUniformLocation(program, "u_mag_center"), mag_center[0], mag_center[1]); 
+		gl.uniform1f(gl.getUniformLocation(program, "u_mag_zoom"), mag_zoom); 
+		gl.uniform2f(gl.getUniformLocation(program, "u_domain_offset"), domainOffset[0], domainOffset[1]); 
+		gl.uniform2f(gl.getUniformLocation(program, "u_twist"), twistParam[0], twistParam[1]); 
+		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); 
+	}
+
+	function compileExpression(expr) { 
+		expr = expr.replace(/[^a-zA-Z0-9\+\-\*\/\^\(\)\.]/g, '').replace(/\bpi\b/g, '3.14159265').replace(/\bz\b/g, 'Z'); 
+		let tokens = [], i = 0; 
+		while (i < expr.length) { 
+			let c = expr[i]; 
+			if (/[0-9.]/.test(c)) { 
+				let num = ''; 
+				while (i < expr.length && /[0-9.]/.test(expr[i])) num += expr[i++]; 
+				tokens.push({ type: 'num', value: num + (num.includes('.') ? '' : '.0') }); 
+				continue; 
+			} 
+			if (/[a-zA-Z_]/.test(c)) { 
+				let id = ''; 
+				while (i < expr.length && /[a-zA-Z0-9_]/.test(expr[i])) id += expr[i++]; 
+				tokens.push({ type: 'id', value: id }); 
+				continue; 
+			} 
+			if (c === '*' && expr[i+1] === '*') { tokens.push({ type: 'op', value: '^' }); i += 2; continue; } 
+			if (['+', '-', '*', '/', '^', '(', ')'].includes(c)) { tokens.push({ type: 'op', value: c }); i++; continue; } 
+			i++; 
+		} 
+		let output = [], stack = []; 
+		const precedence = { '+': 1, '-': 1, '*': 2, '/': 2, '^': 3 }; 
+		const rightAssoc = { '^': true }; 
+		const allowedFuncs = ['sin', 'cos', 'exp', 'log', 'abs', 'sqrt', 'conj', 'sinh', 'cosh', 'tanh', 'tan', 'floor', 'ceil', 'round', 'asin', 'acos', 'atan', 'asinh', 'acosh', 'atanh', 'fract', 'norm', 'relu', 'max0', 'mod', 'mod1', 'sign', 'sgn', 'smooth', 'sst', 'clamp', 'clp', 'lamw', 'eta', 'bessel', 'gamma']; 
+		for (let t of tokens) { 
+			if (t.type === 'num') output.push({ type: 'glsl', value: `vec2(${t.value}, 0.0)` }); 
+			else if (t.type === 'id') { 
+				if (t.value === 'Z') output.push({ type: 'glsl', value: 'Z' }); 
+				else if (t.value === 'i' || t.value === 'j') output.push({ type: 'glsl', value: 'vec2(0.0, 1.0)' }); 
+				else if (allowedFuncs.includes(t.value)) { 
+					let f = t.value; 
+					if(t.value==='max0')f='relu'; if(t.value==='mod1')f='mod'; if(t.value==='sgn')f='sign'; if(t.value==='sst')f='smooth'; if(t.value==='clp')f='clamp'; 
+					stack.push({ type: 'func', value: 'c_' + f }); 
+				} 
+				else if (['real', 'rea'].includes(t.value)) stack.push({ type: 'func', value: 'c_real' }); 
+				else if (['imag', 'ima'].includes(t.value)) stack.push({ type: 'func', value: 'c_imag' }); 
+				else if (['angle', 'ang', 'arg'].includes(t.value)) stack.push({ type: 'func', value: 'c_angle' }); 
+				else throw new Error("Not supported: " + t.value); 
+			} 
+			else if (t.value === '(') stack.push(t); 
+			else if (t.value === ')') { 
+				while (stack.length > 0 && stack[stack.length-1].value !== '(') output.push(stack.pop()); 
+				stack.pop(); 
+				if (stack.length > 0 && stack[stack.length-1].type === 'func') output.push(stack.pop()); 
+			} 
+			else { 
+				if (t.value === '-' && (output.length === 0 || (output[output.length-1].type === 'op' && output[output.length-1].value !== ')'))) { 
+					output.push({ type: 'glsl', value: 'vec2(-1.0, 0.0)' }); 
+					stack.push({ type: 'op', value: '*' }); 
+					continue; 
+				} 
+				while (stack.length > 0 && stack[stack.length-1].type === 'op' && stack[stack.length-1].value !== '(') { 
+					let top = stack[stack.length-1].value; 
+					if (precedence[top] > precedence[t.value] || (precedence[top] === precedence[t.value] && !rightAssoc[t.value])) output.push(stack.pop()); 
+					else break; 
+				} 
+				stack.push(t); 
+			} 
+		} 
+		while (stack.length > 0) { 
+			let top = stack.pop(); 
+			if (top.value === '(') throw new Error("Bracket error"); 
+			output.push(top); 
+		} 
+		let glslStack = []; 
+		for (let t of output) { 
+			if (t.type === 'glsl') glslStack.push(t.value); 
+			else if (t.type === 'func') { 
+				let arg = glslStack.pop(); 
+				glslStack.push(`${t.value}(${arg || 'vec2(0.001, 0.001)'})`); 
+			} 
+			else if (t.type === 'op') { 
+				if (t.value === '^') { 
+					let exp = glslStack.pop(); 
+					let base = glslStack.pop(); 
+					if (!base || !exp) { glslStack.push('vec2(0.001, 0.001)'); continue; } 
+					if (exp === 'vec2(2.0, 0.0)') glslStack.push(`c_sq(${base})`); 
+					else if (exp === 'vec2(3.0, 0.0)') glslStack.push(`c_mul(c_sq(${base}), ${base})`); 
+					else if (exp === 'vec2(4.0, 0.0)') glslStack.push(`c_mul(c_sq(${base}), c_sq(${base}))`); 
+					else glslStack.push(`c_pow(${base}, ${exp})`); 
+				} 
+				else { 
+					let b = glslStack.pop(); 
+					let a = glslStack.pop(); 
+					if (!a || !b) { glslStack.push(`vec2(0.001, 0.001)`); continue; } 
+					if (t.value === '+') glslStack.push(`(${a} + ${b})`); 
+					else if (t.value === '-') glslStack.push(`(${a} - ${b})`); 
+					else if (t.value === '*') glslStack.push(`c_mul(${a}, ${b})`); 
+					else if (t.value === '/') glslStack.push(`c_div(${a}, ${b})`); 
+				} 
+			} 
+		} 
+		if (glslStack.length !== 1) throw new Error("Parse failed"); 
+		return glslStack[0]; 
+	}
+
+	function updateFormula() { 
+		try {
+			let expr = document.getElementById('exprInput').value.trim(); 
+			if (/^f?\d+$/.test(expr)) { 
+				let key = expr.startsWith('f') ? expr.substring(1) : expr; 
+				let parsed = parseInt(key, 10); 
+				if (key === "00" || key === "0") parsed = 1; 
+				let dictKey = String(parsed); 
+				if (savedFormulas[dictKey]) { 
+					expr = savedFormulas[dictKey]; 
+					document.getElementById('exprInput').value = expr; 
+				} else if (savedFormulas[key]) { 
+					expr = savedFormulas[key]; 
+					document.getElementById('exprInput').value = expr; 
+				} else { 
+					alert(`ID not found: ${expr}`); 
+					return; 
+				} 
+			} 
+			baseFormula = expr; 
+			let glslCode = compileExpression(expr); 
+			initWebGL(fsSourceTemplate.replace(/\{\{EXPR\}\}/g, glslCode)); 
+			setMode('julia'); 
+			updateQRCode(); 
+		} catch(e) { 
+			alert("Error:\n" + e.message); 
+		} 
+	}
+
+	document.getElementById('exprInput').addEventListener('keypress', function (e) { if (e.key === 'Enter') { updateFormula(); this.blur(); } });
+
+	function getComplexCoord(cX, cY) {
+		const r = canvas.getBoundingClientRect();
+		const base = Math.min(r.width, r.height);
+		const dx = cX - (r.left + r.width / 2);
+		const dy = cY - (r.top + r.height / 2);
+		const nx = dx / base;
+		const ny = -dy / base;
+		let rx, ry;
+		if (rotation === 1) { rx = -ny; ry = nx; }
+		else if (rotation === 2) { rx = -nx; ry = -ny; }
+		else if (rotation === 3) { rx = ny; ry = -nx; }
+		else { rx = nx; ry = ny; }
+		if (renderMode === 1) {
+			return [rx * mag_zoom + mag_center[0], ry * mag_zoom + mag_center[1]];
+		}
+		if (mathMode === 'domain') {
+			return [rx * 3.0, ry * 3.0];
+		}
+		return [rx * 3.0 - 0.5, ry * 3.0];
+	}
+
+	function startDraw(cX, cY) {
+		isDrawing = true;
+		if (isParamMode) {
+			updateParamsFromPointer(cX, cY);
+		} else if (mathMode === 'mandelbrot') {
+			const [re, im] = getComplexCoord(cX, cY);
+			const wasZoomed = (renderMode === 1);
+			renderMode = 1;
+			mag_center = [re, im];
+			if (!wasZoomed) {
+				mag_zoom = FIRST_ZOOM;
+			} else if (mag_zoom > MIN_ZOOM) {
+				mag_zoom = Math.max(mag_zoom * ZOOM_FACTOR, MIN_ZOOM);
+			}
+			dragAnchor = { world: [re, im], screen: [cX, cY] };
+			render();
+		} else {
+			applyPoint(cX, cY);
+		}
+	}
+
+	function moveDraw(cX, cY) {
+		if (!isDrawing) return;
+		if (isParamMode) {
+			updateParamsFromPointer(cX, cY);
+		} else if (mathMode === 'mandelbrot') {
+			if (!dragAnchor) return;
+			const r = canvas.getBoundingClientRect();
+			const base = Math.min(r.width, r.height);
+			let sdx = (cX - dragAnchor.screen[0]) / base * mag_zoom;
+			let sdy = -(cY - dragAnchor.screen[1]) / base * mag_zoom;
+			let wdx, wdy;
+			if (rotation === 1) { wdx = sdy; wdy = -sdx; }
+			else if (rotation === 2) { wdx = -sdx; wdy = -sdy; }
+			else if (rotation === 3) { wdx = -sdy; wdy = sdx; }
+			else { wdx = sdx; wdy = sdy; }
+			mag_center = [dragAnchor.world[0] - wdx, dragAnchor.world[1] - wdy];
+			render();
+		} else {
+			applyPoint(cX, cY);
+		}
+	}
+
+	function stopDraw() { isDrawing = false; dragAnchor = null; }
+
+	function applyPoint(cX, cY) {
+		const [re, im] = getComplexCoord(cX, cY);
+		if (mathMode === 'domain') {
+			twistParam[0] = re * 2.0; twistParam[1] = im * 0.5;
+			domainOffset[0] = -re; domainOffset[1] = -im;
+			render();
+		} else if (mathMode === 'newton' || mathMode === 'julia') {
+			juliaC = [re, im]; renderMode = 2; render();
+		}
+	}
+
+	function updateParamsFromPointer(cX, cY) {
+		const r = canvas.getBoundingClientRect();
+		const base = Math.min(r.width, r.height);
+		const nx = (cX - (r.left + r.width / 2)) / (base / 2);
+		const ny = -(cY - (r.top + r.height / 2)) / (base / 2);
+		
+		kCoeff = nx * 2.0;
+		pCoeff = ny * 2.0;
+		
+		hudK.textContent = kCoeff.toFixed(2);
+		hudP.textContent = pCoeff.toFixed(2);
+		
+		render();
+	}
+
+	canvas.addEventListener('mousedown', (e) => { if (e.button === 0) startDraw(e.clientX, e.clientY); }); 
+	canvas.addEventListener('mousemove', (e) => moveDraw(e.clientX, e.clientY)); 
+	canvas.addEventListener('mouseup', stopDraw); 
+	canvas.addEventListener('mouseleave', stopDraw);
+	canvas.addEventListener('touchstart', (e) => { e.preventDefault(); if (e.touches.length === 1) startDraw(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false }); 
+	canvas.addEventListener('touchmove', (e) => { e.preventDefault(); if (e.touches.length === 1) moveDraw(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false }); 
+	canvas.addEventListener('touchend', (e) => { e.preventDefault(); stopDraw(); }, { passive: false });
+	window.addEventListener('resize', () => { render(); });
+
+	document.body.addEventListener('click', function(e) { 
+		if (modal.style.display === 'flex' && !modal.contains(e.target) && !e.target.closest('#ui')) {
+			modal.style.display = 'none';
+		}
+	});
+
+	// Start the app
+	initMenu(); 
+	loadFromUrl();
+</script>
+</body>
+</html>
